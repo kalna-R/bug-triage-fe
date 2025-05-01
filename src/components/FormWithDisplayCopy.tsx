@@ -44,7 +44,8 @@ const FormWithDisplayCopy: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('https://b194-34-32-191-121.ngrok-free.app/predict', {
+      // const response = await fetch('https://b194-34-32-191-121.ngrok-free.app/predict', {
+        const response = await fetch('http://localhost:8080/developer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ const FormWithDisplayCopy: React.FC = () => {
   return (
     <div className="page">
       <header className="header">
-      <FontAwesomeIcon icon={faBug} className="icon" />
+        <FontAwesomeIcon icon={faBug} className="icon" />
         <nav className="nav">
           <a href="#">Home</a>
           <Link to="/assigned-bugs">Bugs</Link>
@@ -146,14 +147,15 @@ const FormWithDisplayCopy: React.FC = () => {
           </form>
         </section>
 
-        <section className="result-section">
-        {/* <p className="submit-info">Let us find the perfect developer for your bug - just submit the details.</p> */}
-        <FontAwesomeIcon icon={faUserCircle} className="result-icon" />
-          <div className="email-badge">{developerEmail ? developerEmail : 'user@bugtriage.com'}</div>
-          <p>
-            Is more likely to resolve the bug efficiently
-          </p>
-        </section>
+        {developerEmail && (
+          <section className="result-section">
+            <h1>Prediction Results</h1>
+            <FontAwesomeIcon icon={faUserCircle} className="result-icon" />
+            <div className="email-badge">{developerEmail}</div>
+            <p>Is more likely to resolve the bug efficiently</p>
+          </section>
+        )}
+
       </main>
     </div>
   );
