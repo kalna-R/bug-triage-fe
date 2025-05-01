@@ -261,3 +261,22 @@ body {
     margin-bottom: 2rem;
     white-space: nowrap;
   }
+
+  .error {
+    border: 1px solid #ff4444;
+  }
+  
+  .error-text {
+    color: #ff4444;
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+    display: block;
+  }
+  
+  .error-message {
+    color: #ff4444;
+    background-color: #ffebee;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }

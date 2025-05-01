@@ -14,6 +14,13 @@ interface FormData {
   description: string;
 }
 
+interface FormErrors {
+  bugId?: string;
+  severity?: string;
+  priority?: string;
+  description?: string;
+}
+
 const FormWithDisplayCopy: React.FC = () => {
   // State for form fields
   const [formData, setFormData] = useState<FormData>({
@@ -27,6 +34,41 @@ const FormWithDisplayCopy: React.FC = () => {
   const [developerEmail, setDeveloperEmail] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  // Validate form input data
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    // Bug ID validation
+    if (!formData.bugId.trim()) {
+      newErrors.bugId = 'Bug ID is required';
+    } else if (!/^[A-Za-z0-9-]+$/.test(formData.bugId)) {
+      newErrors.bugId = 'Bug ID can only contain letters, numbers, and hyphens';
+    }
+
+    // Severity validation
+    if (!formData.severity) {
+      newErrors.severity = 'Please select a severity level';
+    }
+
+    // Priority validation
+    if (!formData.priority) {
+      newErrors.priority = 'Please select a priority level';
+    }
+
+    // Description validation
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    } else if (formData.description.trim().length < 10) {
+      newErrors.description = 'Description should be at least 20 characters';
+    } else if (formData.description.trim().length > 300) {
+      newErrors.description = 'Description should not exceed 300 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -40,12 +82,17 @@ const FormWithDisplayCopy: React.FC = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       // const response = await fetch('https://b194-34-32-191-121.ngrok-free.app/predict', {
-        const response = await fetch('http://localhost:8080/developer', {
+      const response = await fetch('http://localhost:8080/developer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,6 +134,9 @@ const FormWithDisplayCopy: React.FC = () => {
         <section className="form-section">
           <h1>Predict Developer</h1>
           <p className="submit-info">Let us find the perfect developer for your bug - just submit the details.</p>
+
+          {error && <div className="error-message">{error}</div>}
+
           <form className="form" onSubmit={handleSubmit}>
             <label>
               Bug Report ID
@@ -97,6 +147,7 @@ const FormWithDisplayCopy: React.FC = () => {
                 onChange={handleInputChange}
                 required
               />
+              {errors.bugId && <span className="error-text">{errors.bugId}</span>}
             </label>
 
             <label>
@@ -112,6 +163,7 @@ const FormWithDisplayCopy: React.FC = () => {
                 <option>Medium</option>
                 <option>High</option>
               </select>
+              {errors.severity && <span className="error-text">{errors.severity}</span>}
             </label>
 
             <label>
@@ -127,6 +179,7 @@ const FormWithDisplayCopy: React.FC = () => {
                 <option>Medium</option>
                 <option>High</option>
               </select>
+              {errors.priority && <span className="error-text">{errors.priority}</span>}
             </label>
 
             <label>
@@ -139,6 +192,7 @@ const FormWithDisplayCopy: React.FC = () => {
                 onChange={handleInputChange}
                 required
               ></textarea>
+              {errors.description && <span className="error-text">{errors.description}</span>}
             </label>
 
             <button type="submit" disabled={loading}>
