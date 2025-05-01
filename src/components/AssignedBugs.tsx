@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './FormWithDisplay.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserCircle } from '@fortawesome/free-solid-svg-icons';
-import { faBug } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faBug } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
+import { ref, onValue } from 'firebase/database';
+import { database } from '../firebase';
 
 interface Bug {
   bugId: string;
@@ -11,34 +12,60 @@ interface Bug {
   severity: string;
   priority: string;
   developer: string;
+  timestamp?: string;
 }
 
 const AssignedBugs: React.FC = () => {
   const [bugs, setBugs] = useState<Bug[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState<boolean>(true);
 
   useEffect(() => {
+    const fetchBugs = () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const bugsRef = ref(database, 'bugReports');
+        
+        // Set up realtime listener
+        const unsubscribe = onValue(bugsRef, (snapshot) => {
+          const bugsData: Bug[] = [];
+          snapshot.forEach((childSnapshot) => {
+            const bug = childSnapshot.val();
+            bugsData.push({
+              bugId: bug.bugId,
+              description: bug.description,
+              severity: bug.severity,
+              priority: bug.priority,
+              developer: bug.developer,
+              timestamp: bug.timestamp
+            });
+          });
+          
+          // Sort by timestamp (newest first)
+          bugsData.sort((a, b) => 
+            (b.timestamp || '').localeCompare(a.timestamp || '')
+          );
+          
+          setBugs(bugsData);
+          setLoading(false);
+        }, (error) => {
+          setError(error.message);
+          setLoading(false);
+        });
+
+        return () => unsubscribe(); // Cleanup on unmount
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+        setLoading(false);
+      }
+    };
+
     fetchBugs();
   }, []);
-
-  const fetchBugs = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('https://your-api-endpoint.com/assigned-bugs');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setBugs(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const sortByDeveloper = () => {
     const sortedBugs = [...bugs].sort((a, b) => {
@@ -53,10 +80,10 @@ const AssignedBugs: React.FC = () => {
   return (
     <div className="page">
       <header className="header">
-      <FontAwesomeIcon icon={faBug} className="icon" />
+        <FontAwesomeIcon icon={faBug} className="icon" />
         <nav className="nav">
-          <a href="#">Home</a>
-          <a href="/" className="active">Developer</a>
+          <Link to="/">Home</Link>
+          <Link to="/assigned-bugs" className="active">Assigned Bugs</Link>
           <a href="#">About</a>
         </nav>
         <FontAwesomeIcon icon={faUserCircle} className="icon profile-icon" />
@@ -64,36 +91,38 @@ const AssignedBugs: React.FC = () => {
 
       <main className="main-form">
         <section className="form-section-table">
-        <h1>Assigned Bugs</h1>
+          <h1>Assigned Bugs</h1>
+          
+          {loading && <p>Loading bugs...</p>}
+          {error && <p className="error-message">{error}</p>}
+          
           <div className="sort-section" onClick={sortByDeveloper} style={{cursor: 'pointer', marginBottom: '1rem'}}>
             <i className="fas fa-sort-alpha-down"></i> Sort by Developer
           </div>
-          {/* {loading && <p>Loading bugs...</p>}
-          {error && <p style={{color: 'red'}}>{error}</p>}
-          {!loading && !error && ( */}
-            <div className="table-container">
-              <div className="table-header">
-                <div className="table-cell header-cell">Bug ID</div>
-                <div className="table-cell header-cell">Description</div>
-                <div className="table-cell header-cell">Severity</div>
-                <div className="table-cell header-cell">Priority</div>
-                <div className="table-cell header-cell">Developer</div>
-              </div>
-              {(bugs.length > 0 ? bugs : [
-                { bugId: 'B001', description: 'Login button not working', severity: 'High', priority: 'P1', developer: 'Alice@gmail.com' },
-                { bugId: 'B002', description: 'Page crashes on load', severity: 'Medium', priority: 'P2', developer: 'Bob@gmail.com' },
-                { bugId: 'B003', description: 'Typo in footer', severity: 'Low', priority: 'P5', developer: 'Charlie@gmail.com' },
-              ]).map((bug) => (
-                <div className="table-row" key={bug.bugId}>
+          
+          <div className="table-container">
+            <div className="table-header">
+              <div className="table-cell header-cell">Bug ID</div>
+              <div className="table-cell header-cell">Description</div>
+              <div className="table-cell header-cell">Severity</div>
+              <div className="table-cell header-cell">Priority</div>
+              <div className="table-cell header-cell">Developer</div>
+            </div>
+            
+            {bugs.length > 0 ? (
+              bugs.map((bug) => (
+                <div className="table-row" key={`${bug.bugId}-${bug.timestamp}`}>
                   <div className="table-cell">{bug.bugId}</div>
                   <div className="table-cell">{bug.description}</div>
                   <div className="table-cell">{bug.severity}</div>
                   <div className="table-cell">{bug.priority}</div>
                   <div className="table-cell">{bug.developer}</div>
                 </div>
-              ))}
-            </div>
-          {/* )} */}
+              ))
+            ) : (
+              !loading && <div className="no-bugs">No bugs found</div>
+            )}
+          </div>
         </section>
       </main>
     </div>

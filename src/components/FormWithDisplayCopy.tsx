@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserCircle } from '@fortawesome/free-solid-svg-icons';
 import { faBug } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
+import { ref, push } from 'firebase/database';
+import { database } from '../firebase';
 
 
 // Define the type for the form data
@@ -111,8 +113,33 @@ const FormWithDisplayCopy: React.FC = () => {
       const result = await response.json();
       console.log("Developr {}", result.predicted_developer)
       setDeveloperEmail(result.predicted_developer);
+
+      // Save to Firebase
+      const bugReportRef = ref(database, 'bugReports'); // table name
+      await push(bugReportRef, {
+        bugId: formData.bugId,
+        description: formData.description,
+        severity: formData.severity,
+        priority: formData.priority,
+        developer: result.predicted_developer,
+        timestamp: new Date().toISOString()
+      });
+
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      let errorMessage = 'Failed to predict developer';
+
+      if (err instanceof Error) {
+        errorMessage = err.message || errorMessage;
+
+        // Handle network errors specifically
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to the server. Please try again later.';
+        }
+      }
+
+      setError(errorMessage);
+      console.error('Prediction error:', err);
     } finally {
       setLoading(false);
     }
